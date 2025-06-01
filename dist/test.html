@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Resume AI UI Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-center p-8">
+
+  <!-- Upload Button + Prompt -->
+  <div class="bg-gray-800 p-6 rounded-lg w-full max-w-md shadow-xl space-y-4">
+    <input type="file" id="dropzone-file" accept="application/pdf"
+           class="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold
+                  file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"/>
+    <textarea id="promptInput" placeholder="Enter your prompt..."
+              class="w-full mt-2 p-3 rounded-md text-black resize-none"
+              rows="2"></textarea>
+    <button onclick="fakeSubmit()" class="w-full bg-pink-600 hover:bg-pink-700 py-2 rounded-lg font-bold text-white">Submit</button>
+  </div>
+
+  <!-- Loading Modal from previous answer -->
+  <div id="loadingModal" class="fixed inset-0 z-50  items-center justify-center bg-black bg-opacity-70 hidden">
+    <div class="bg-[#1a1a1a] text-white p-6 rounded-xl w-full max-w-md shadow-lg space-y-4 text-center">
+
+      <div class="flex justify-center" id="statusIcon">
+        <svg id="spinnerIcon" class="animate-spin h-6 w-6 text-pink-500" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+        </svg>
+      </div>
+
+      <h3 class="text-lg font-semibold" id="statusMessage">Generating your PDF...</h3>
+      <p id="fileSizeText" class="text-sm text-gray-300">Uploaded File Size: -- MB</p>
+
+      <ul class="space-y-1 text-sm text-left" id="progressSteps">
+        <li id="step1" class="text-pink-400">1. Processing...</li>
+        <li id="step2" class="text-gray-500">2. Validating...</li>
+        <li id="step3" class="text-gray-500">3. Generating PDF...</li>
+      </ul>
+
+      <div id="downloadSection" class="hidden mt-6">
+        <h4 class="text-xl font-semibold text-green-400 mb-2">✅ Done!</h4>
+        <a id="downloadLink"
+           href="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+           download
+           class="inline-block px-6 py-3 rounded-full bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-400 hover:to-teal-500 transition font-semibold text-white">
+          Download PDF
+        </a>
+      </div>
+
+      <div id="errorSection" class="hidden mt-4">
+        <p id="errorText" class="text-red-400 font-medium text-sm"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let hasError = false; // global flag to track if error occurred
+
+function showLoadingOverlay(fileSizeMB) {
+  hasError = false; // reset flag
+  const modal = document.getElementById("loadingModal");
+  modal.classList.remove("hidden");
+  modal.classList.add("flex")
+  document.getElementById("fileSizeText").textContent = `Uploaded File Size: ${fileSizeMB.toFixed(2)} MB`;
+
+  document.getElementById("spinnerIcon").classList = "animate-spin h-6 w-6 text-pink-500";
+  document.getElementById("statusMessage").textContent = "Generating your PDF...";
+  document.getElementById("errorSection").classList.add("hidden");
+  document.getElementById("downloadSection").classList.add("hidden");
+
+  // Reset step classes
+  ["step1", "step2", "step3"].forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.classList.remove("text-green-400", "text-pink-400", "text-red-400");
+    el.classList.add(i === 0 ? "text-pink-400" : "text-gray-500");
+    el.textContent = `${i + 1}. ${el.textContent.split('. ')[1] || 'Step'}`;
+  });
+
+  updateStepStatus(0);
+}
+
+function updateStepStatus(index, error = null, downloadURL = null) {
+  const steps = ["step1", "step2", "step3"];
+
+  if (hasError) return;
+
+  if (index > 0) {
+    document.getElementById(steps[index - 1]).classList.replace("text-pink-400", "text-green-400");
+  }
+
+  if (error) {
+    hasError = true;
+    document.getElementById("spinnerIcon").outerHTML = `<div class="text-red-500 text-3xl">❌</div>`;
+    document.getElementById("statusMessage").textContent = "Something went wrong.";
+    document.getElementById(steps[index]).classList.replace("text-pink-400", "text-red-400");
+    document.getElementById(steps[index]).textContent += ` — ${error}`;
+    document.getElementById("errorText").textContent = error;
+    document.getElementById("errorSection").classList.remove("hidden");
+    return;
+  }
+
+  document.getElementById(steps[index]).classList.replace("text-gray-500", "text-pink-400");
+
+  if (index === steps.length - 1) {
+    setTimeout(() => {
+      if (hasError) return;
+      document.getElementById("spinnerIcon").outerHTML = `<div class="text-green-400 text-2xl">✅</div>`;
+      document.getElementById("statusMessage").textContent = "Your PDF is ready!";
+      document.getElementById("downloadSection").classList.remove("hidden");
+      document.getElementById("downloadLink").href = downloadURL || "#";
+    }, 1500);
+  } else {
+    setTimeout(() => {
+      if (!hasError) updateStepStatus(index + 1, null, downloadURL);
+    }, 1500);
+  }
+}
+
+
+    function fakeSubmit() {
+      const file = document.getElementById("dropzone-file").files[0];
+      const prompt = document.getElementById("promptInput").value;
+
+      if (!file || !prompt.trim()) {
+        alert("Please upload a file and enter a prompt.");
+        return;
+      }
+
+      const sizeMB = file.size / (1024 * 1024);
+      showLoadingOverlay(sizeMB);
+
+      // Simulate fake error for demo (e.g., empty file)
+      setTimeout(() => {
+        if (file.size < 1000) {
+          updateStepStatus(1, "File is too small or empty.");
+        }
+      }, 2000);
+    }
+  </script>
+
+</body>
+</html>
