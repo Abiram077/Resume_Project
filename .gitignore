@@ -1,0 +1,16 @@
+# Ignore node_modules folder (common for Node.js projects)
+node_modules/
+
+# Ignore logs
+logs/
+*.log
+
+# Ignore OS/system files
+.DS_Store
+Thumbs.db
+
+# Ignore environment config files (if you use any)
+.env
+
+# Ignore build output folders
+build/
